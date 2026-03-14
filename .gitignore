@@ -1,0 +1,69 @@
+# Environment
+configs/.env
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+
+# Scrapy
+httpcache/
+.scrapy/
+
+# Data (raw scraped files — stored separately / in S3)
+data/*.jsonl
+data/*.csv
+data/*.json
+data/historical/
+data/seen_urls.sqlite
+scraper/data/
+
+# Diagnostic / selector output files
+reports/selector_diagnostics/
+
+# dbt user config
+dbt/zim_property/.user.yml
+
+# zim_property_analytics has its own git repo — tracked separately
+zim_property_analytics/
+
+# Logs
+logs/
+*.log
+
+# dbt
+dbt/zim_property/target/
+dbt/zim_property/dbt_packages/
+dbt/zim_property/logs/
+
+# Docker
+.dockerignore
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Orders database and generated PDFs (runtime data — not source code)
+reports/orders.db
+reports/output/
+
+# Dagster home
+.tmp_dagster_home*/

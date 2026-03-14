@@ -1,0 +1,28 @@
+zim_property:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'ZIM_DBT_ROLE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'ZIM_PROPERTY_DB') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'ZIM_PROPERTY_WH') }}"
+      schema: STAGING
+      threads: 4
+      client_session_keep_alive: False
+      query_tag: dbt_dev
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "ZIM_DBT_ROLE"
+      database: "ZIM_PROPERTY_DB"
+      warehouse: "ZIM_PROPERTY_WH"
+      schema: STAGING
+      threads: 8
+      client_session_keep_alive: False
+      query_tag: dbt_prod

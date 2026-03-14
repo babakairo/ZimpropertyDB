@@ -1,0 +1,33 @@
+# ── dbt image ─────────────────────────────────────────────────────────────────
+# Runs dbt transformations against Snowflake.
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim
+
+LABEL description="dbt transformation runner for ZimProperty platform"
+
+RUN apt-get update && apt-get install -y --no-install-recommends git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install dbt and Snowflake adapter
+RUN pip install --no-cache-dir \
+    dbt-core==1.7.* \
+    dbt-snowflake==1.7.* \
+    python-dotenv
+
+# Copy dbt project
+COPY dbt/zim_property/ ./dbt/zim_property/
+COPY configs/          ./configs/
+
+# Install dbt packages
+WORKDIR /app/dbt/zim_property
+RUN dbt deps --profiles-dir .
+
+WORKDIR /app
+
+COPY docker/entrypoint_dbt.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,0 +1,147 @@
+version: 2
+
+models:
+
+  # ── Staging ──────────────────────────────────────────────────────────────────
+  - name: stg_property_listings
+    description: >
+      Lightly transformed raw listings. Types cast, nulls normalised.
+      This is the foundation for all downstream models.
+    columns:
+      - name: listing_id
+        description: "Unique identifier — SHA-256 of source+URL"
+        tests:
+          - unique
+          - not_null
+      - name: data_source
+        tests:
+          - not_null
+      - name: listing_url
+        tests:
+          - not_null
+      - name: currency
+        tests:
+          - accepted_values:
+              values: ["USD", "ZWL", "ZIG"]
+              severity: warn
+      - name: listing_type
+        tests:
+          - accepted_values:
+              values: ["sale", "rent", null]
+              severity: warn
+      - name: property_type
+        tests:
+          - accepted_values:
+              values: ["house", "flat", "land", "commercial", "farm", "unknown", null]
+              severity: warn
+
+  # ── Intermediate ─────────────────────────────────────────────────────────────
+  - name: int_cleaned_property_listings
+    description: >
+      Fully enriched listings with USD prices, validated locations,
+      feature flags, data quality scores, and derived metrics.
+    columns:
+      - name: listing_id
+        tests:
+          - unique
+          - not_null
+      - name: property_price_usd
+        description: "Price normalised to USD using historical exchange rates"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 50000000
+              severity: warn
+      - name: data_quality_score
+        description: "Completeness score from 0 (empty) to 1 (all fields populated)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+      - name: listing_type
+        tests:
+          - accepted_values:
+              values: ["sale", "rent", "unknown", null]
+
+  # ── Marts ────────────────────────────────────────────────────────────────────
+  - name: property_price_by_suburb
+    description: >
+      Monthly average property prices aggregated by suburb.
+      Primary mart for suburb-level dashboard and heatmaps.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - suburb_clean
+            - city_clean
+            - property_type
+            - listing_type
+            - snapshot_month
+    columns:
+      - name: listing_count
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 3     # We enforce HAVING >= 3
+      - name: avg_price_usd
+        tests:
+          - not_null
+
+  - name: property_price_by_city
+    description: "Monthly city-level price aggregates with sale/rent split"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - city_clean
+            - property_type
+            - listing_type
+            - snapshot_month
+
+  - name: average_price_by_bedroom
+    description: "Price breakdown by bedroom count — key for diaspora investment sizing"
+
+  - name: monthly_price_trends
+    description: >
+      Incremental model tracking MoM and YoY price changes with rolling averages.
+      Feeds the main price trend charts.
+    columns:
+      - name: mom_price_change_pct
+        description: "Month-over-month % price change (can be negative)"
+      - name: yoy_price_change_pct
+        description: "Year-over-year % price change"
+
+  - name: suburb_price_growth
+    description: >
+      Suburb growth rankings. Refreshed daily.
+      Powers the 'Hottest Suburbs' feature in the investment dashboard.
+    columns:
+      - name: rank_by_growth_12m
+        description: "1 = fastest appreciating suburb (within property_type + listing_type)"
+
+  - name: current_agent_listings
+    description: >
+      Latest active listing snapshot restricted to listings with an identified
+      agent or agency name and at least one contact method (phone or email).
+    columns:
+      - name: listing_id
+        tests:
+          - unique
+          - not_null
+      - name: agent_name
+        tests:
+          - not_null
+      - name: agent_phone
+        description: "Normalised phone in +263 format when available"
+      - name: agent_email
+        description: "Lowercased validated email when available"
+
+  - name: agent_directory
+    description: >
+      Agent and agency contact directory with current active listing counts and
+      coverage by city/suburb.
+    columns:
+      - name: agent_name
+        tests:
+          - not_null
+      - name: active_listing_count
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1

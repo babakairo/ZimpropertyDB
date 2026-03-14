@@ -1,0 +1,48 @@
+# Dagster instance configuration
+# Placed at $DAGSTER_HOME/dagster.yaml inside containers.
+# Tells Dagster to use PostgreSQL for run storage and event log storage
+# (instead of the default SQLite, which doesn't work across multiple containers).
+
+run_storage:
+  module: dagster_postgres.run_storage
+  class: PostgresRunStorage
+  config:
+    postgres_db:
+      hostname:   { env: DAGSTER_POSTGRES_HOST }
+      port:       { env: DAGSTER_POSTGRES_PORT }
+      db_name:    { env: DAGSTER_POSTGRES_DB }
+      username:   { env: DAGSTER_POSTGRES_USER }
+      password:   { env: DAGSTER_POSTGRES_PASSWORD }
+
+event_log_storage:
+  module: dagster_postgres.event_log
+  class: PostgresEventLogStorage
+  config:
+    postgres_db:
+      hostname:   { env: DAGSTER_POSTGRES_HOST }
+      port:       { env: DAGSTER_POSTGRES_PORT }
+      db_name:    { env: DAGSTER_POSTGRES_DB }
+      username:   { env: DAGSTER_POSTGRES_USER }
+      password:   { env: DAGSTER_POSTGRES_PASSWORD }
+
+schedule_storage:
+  module: dagster_postgres.schedule_storage
+  class: PostgresScheduleStorage
+  config:
+    postgres_db:
+      hostname:   { env: DAGSTER_POSTGRES_HOST }
+      port:       { env: DAGSTER_POSTGRES_PORT }
+      db_name:    { env: DAGSTER_POSTGRES_DB }
+      username:   { env: DAGSTER_POSTGRES_USER }
+      password:   { env: DAGSTER_POSTGRES_PASSWORD }
+
+# Compute log manager — writes op stdout/stderr to local files
+compute_logs:
+  module: dagster.core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir: /app/logs/compute_logs
+
+# Telemetry off
+telemetry:
+  enabled: false

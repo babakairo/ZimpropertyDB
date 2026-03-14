@@ -1,0 +1,43 @@
+name: 'zim_property'
+version: '1.0.0'
+config-version: 2
+
+profile: 'zim_property'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # Override these per environment
+  database: "ZIM_PROPERTY_DB"
+  start_date: "2024-01-01"
+  # ZiG (new currency introduced April 2024, ~27 ZiG per USD as of 2025)
+  zig_per_usd: 27.5
+
+models:
+  zim_property:
+    staging:
+      +materialized: view
+      +schema: STAGING
+      +tags: ["staging"]
+    intermediate:
+      +materialized: table
+      +schema: INTERMEDIATE
+      +tags: ["intermediate"]
+    marts:
+      +materialized: table
+      +schema: ANALYTICS
+      +tags: ["marts"]
+      price_trends:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +unique_key: ["trend_month", "city_clean", "property_type", "listing_type"]

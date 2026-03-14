@@ -1,0 +1,36 @@
+# ── Scraper image ──────────────────────────────────────────────────────────────
+# Runs the Scrapy spiders + standalone Snowflake loader.
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim AS base
+
+LABEL maintainer="ZimProperty Platform"
+LABEL description="Scrapy scraper for Zimbabwe property listings"
+
+# System deps — Scrapy needs libxml2, libxslt for lxml
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxml2-dev \
+    libxslt-dev \
+    libssl-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Python deps first for layer caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Project files
+COPY scraper/       ./scraper/
+COPY pipelines/     ./pipelines/
+COPY configs/       ./configs/
+
+# Create output dirs
+RUN mkdir -p data logs httpcache
+
+# Entrypoint script — run all spiders then load
+COPY docker/entrypoint_scraper.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

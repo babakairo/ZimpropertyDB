@@ -1,0 +1,83 @@
+version: 2
+
+sources:
+  - name: raw
+    database: ZIM_PROPERTY_DB
+    schema: RAW
+    description: "Raw layer: scraped property data, never modified"
+    tables:
+      - name: zw_property_listings
+        description: "All scraped listings from Zimbabwe property portals"
+        columns:
+          - name: listing_id
+            description: "Unique SHA-256 derived ID (source + URL)"
+            tests:
+              - unique
+              - not_null
+          - name: listing_url
+            tests:
+              - not_null
+          - name: source
+            description: >
+              Origin website for this listing. No accepted_values constraint —
+              new scraper sources are added without schema changes.
+              Use RAW.ZW_PROPERTY_LISTINGS to discover all active sources.
+            tests:
+              - not_null
+          - name: currency
+            tests:
+              - accepted_values:
+                  values: ["USD", "ZWL", "ZIG"]
+                  severity: warn
+
+      - name: scrape_runs
+        description: "Audit trail for every scraper run"
+
+  # NOTE: web.archive.org (Wayback Machine) records are present in RAW but
+  # excluded from all STAGING and downstream models via the filtered CTE in
+  # 07_clean_and_segment.sql. See stg_wayback_archive.sql for the isolation view.
+
+  - name: staging
+    database: ZIM_PROPERTY_DB
+    schema: STAGING
+    description: "Staging layer: cleaned, normalised data"
+    tables:
+      - name: zwl_usd_exchange_rates
+        description: "Daily ZWL/USD exchange rates"
+        columns:
+          - name: rate_date
+            tests:
+              - unique
+              - not_null
+      - name: zw_suburbs_reference
+        description: "Known Zimbabwe suburbs with coordinates"
+
+  - name: warehouse
+    database: ZIM_PROPERTY_DB
+    schema: WAREHOUSE
+    description: "Kimball star schema warehouse layer"
+    tables:
+      - name: fact_listings
+        description: "Fact table: one row per scrape event"
+      - name: dim_date
+        description: "Date dimension (2020–2030)"
+      - name: dim_location
+        description: "Location dimension: suburb/city"
+      - name: dim_property
+        description: "Property dimension: one row per master property"
+      - name: dim_property_type
+        description: "Property type lookup"
+      - name: dim_source
+        description: "Scrape source lookup"
+
+  - name: master
+    database: ZIM_PROPERTY_DB
+    schema: MASTER
+    description: "Master entity layer: deduplicated property records"
+    tables:
+      - name: property_master
+        description: "One row per physical property (entity resolved)"
+      - name: property_price_history
+        description: "Append-only price event log per property"
+      - name: listing_property_link
+        description: "Many-to-one: listing → master property"

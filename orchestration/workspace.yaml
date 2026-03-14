@@ -1,0 +1,9 @@
+# Dagster workspace — tells the webserver and daemon where to find code locations.
+# A "code location" is a Python module that exposes a `defs` (Definitions) object.
+
+load_from:
+  - python_file:
+      relative_path: pipeline.py        # orchestration/pipeline.py
+      location_name: zim_property
+      executable_path: python           # uses the container's venv Python
+      working_directory: /app           # resolve imports relative to /app

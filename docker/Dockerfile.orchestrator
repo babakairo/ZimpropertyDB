@@ -1,0 +1,32 @@
+# ── Dagster orchestrator image ────────────────────────────────────────────────
+# Used for both dagster-webserver and dagster-daemon services.
+# Contains: Scrapy (spiders run as subprocesses), dbt, Dagster.
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxml2-dev libxslt-dev libssl-dev git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install all Python deps (includes dagster, dagster-dbt, scrapy, snowflake)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy full project
+COPY . .
+
+# Install dbt packages and build manifest (required by dagster-dbt at startup)
+RUN cd dbt/zim_property && dbt deps --profiles-dir . || true
+RUN cd dbt/zim_property && dbt parse --profiles-dir . || true
+
+# Dagster home: run/event log storage config
+ENV DAGSTER_HOME=/opt/dagster/dagster_home
+RUN mkdir -p $DAGSTER_HOME
+COPY docker/dagster.yaml $DAGSTER_HOME/dagster.yaml
+
+RUN mkdir -p data logs
+
+EXPOSE 3000
